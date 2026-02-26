@@ -1,3 +1,5 @@
+all: pdf
+
 build/md/SSD.md : sources/odt/sk_all_2ed.odt
 	mkdir -p build/md/
 	pandoc sources/odt/sk_all_2ed.odt -t markdown -o build/md/SSD.md 
@@ -9,6 +11,7 @@ $(MD_SPLITS) : build/md/SSD.md scripts/00_split_ssd_md.py
 	sed -i '' '1s/^\[\^52\][[:space:]]*//' build/md/Prideaux-1KI.md
 
 build/temp/Prideaux-%.temp : build/md/Prideaux-%.md scripts/01_convert_verses.py
+	mkdir -p build/temp
 	python3 scripts/01_convert_verses.py $< $@ --id $*
 
 build/usfm/prideaux/Prideaux-%.usfm : build/temp/Prideaux-%.temp build/md/SSD.md scripts/02_convert_footnotes.py
@@ -20,7 +23,7 @@ PRIDEAUX_USFM_TARGETS := \
 	build/usfm/prideaux/Prideaux-2SA.usfm \
 	build/usfm/prideaux/Prideaux-1KI.usfm
 
-WEB_USFM_ZIP := build/eng-web_usfm.zip
+WEB_USFM_ZIP := sources/eng-web_usfm.zip
 WEB_USFM_TMP := build/eng-web_usfm_extract
 
 WEB_USFM_TARGETS := \
