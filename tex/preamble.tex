@@ -1,0 +1,129 @@
+\documentclass[9pt]{extbook}
+
+\usepackage[margin=18mm]{geometry}
+\usepackage{paracol}
+\usepackage{microtype}
+\usepackage{hyperref}
+\usepackage{needspace}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+
+\renewcommand{\headrulewidth}{0.4pt}   % line under header (optional)
+
+\setlength{\columnsep}{10mm}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1pt}
+\setlength{\belowfootnoteskip}{14pt}
+% Width reserved for verse numbers (tune)
+
+\newlength{\verselabelwidth}
+\newlength{\verselabelgap}
+
+\pagestyle{fancy}
+
+\fancyhf{}                 % clear all header and footer fields
+\fancyhead[LE,RO]{\thepage}   % page numbers outer edge
+\fancyhead[LO]{\leftmark}     % left page, inner header
+\fancyhead[RE]{\rightmark}    % right page, inner header
+
+\fancyhead[LE]{Samuel, Saul and David Parallel Edition}
+\fancyhead[RO]{\rightmark}
+\fancyhead[LO,RE]{\thepage}
+
+
+% Measure width from the widest label you expect (Jeremiah: "52:34")
+\settowidth{\verselabelwidth}{\scriptsize 52:34}
+
+% Half-hanging label: half in margin, half in text
+\newcommand{\verselabel}[1]{%
+    \hspace*{-0.5\verselabelwidth}%
+    {\textsuperscript{\scriptsize #1}}%
+}
+\newcommand{\emptyverselabel}[1]{%
+    \hspace*{-0.5\verselabelwidth}%
+    {\textsuperscript{\scriptsize\textcolor{gray}{#1}}}%
+}
+\newcommand{\smartverse}[2]{%
+\noindent
+\if\relax\detokenize{#2}\relax
+\emptyverselabel{#1}
+\else
+\verselabel{#1}
+\fi
+\,#2\par
+}
+
+\newcommand{\VersePair}[4]{%
+  % \noindent\verselabel{#1}\,#2\par
+  \smartverse{#1}{#2}
+  \switchcolumn[1]
+  % \noindent\verselabel{#3}\,#4\par
+  \smartverse{#3}{#4}
+  \switchcolumn[0]*
+}
+
+\newcommand{\poemindent}[1]{\hspace*{#1em}}
+% Start a new line iff we're currently mid-paragraph,
+% then typeset one poetry line.
+\newcommand{\poemline}[2]{%
+  \ifhmode\unskip\par\fi%
+  \ifnum#1>1 \penalty5000 \fi
+  {\setlength{\parskip}{0pt}%
+   \setlength{\parindent}{0pt}%
+%   \fontsize{9pt}{10.2pt}\selectfont%
+   \noindent\poemindent{#1}#2\par}%
+}
+\newcommand{\ChapterHeading}[1]{%
+    \setcounter{footnote}{0}%
+  \Needspace{7\baselineskip}%
+  \addvspace{1.5em}
+  \begin{center}
+    \large\bfseries Chapter #1
+  \end{center}
+  \addvspace{0.75em}
+  \nobreak\nointerlineskip\penalty10000
+  \markboth{Chapter #1}{Chapter #1}
+}
+\newcommand{\DescriptiveHeading}[1]{%
+\raggedright\par\vspace{-0.3\baselineskip}{\large\textbf{#1}}\par\vspace{0.6\baselineskip}
+}
+\usepackage{fontspec}
+\usepackage{polyglossia}
+%\setmainfont{Libertinus Serif}
+\setmainfont{TeX Gyre Pagella}[
+  SmallCapsFeatures = {Scale=1.10}
+]
+\setmainlanguage{english}
+\setotherlanguage{hebrew}
+\newfontfamily\hebrewfont[
+  BoldFont       = {Ezra SIL},
+  ItalicFont     = {Ezra SIL},
+  BoldItalicFont = {Ezra SIL}
+]{Ezra SIL}
+\usepackage{hyperref}
+\tolerance=1000
+\emergencystretch=2em
+\hbadness=5000
+
+\widowpenalty=6000
+\clubpenalty=3000
+
+\counterwithin{footnote}{section}
+\renewcommand{\thefootnote}{\alph{footnote}}
+
+\usepackage{tikz}
+
+\newcommand{\circled}[1]{%
+  \tikz[baseline=(char.base)]{
+    \node[shape=circle, draw, inner sep=1pt] (char) {#1};
+  }%
+}
+
+\newcommand{\columnAHead}{%
+    \hspace*{-0.5\verselabelwidth}%
+    \circled{\small P}\par
+}
+\newcommand{\columnBHead}{%
+    \hspace*{-0.5\verselabelwidth}%
+    \small (WEB)\par
+}
