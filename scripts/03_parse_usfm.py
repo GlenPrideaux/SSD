@@ -15,6 +15,9 @@ Output:
   build/json/web_1SA.json
   build/json/web_2SA.json
   build/json/web_1KI.json
+  build/json/webbe_1SA.json
+  build/json/webbe_2SA.json
+  build/json/webbe_1KI.json
 
 Notes:
 - This script assumes you have already unpacked your USFM zips into build/usfm/* (for WEB) and 
@@ -345,10 +348,13 @@ def main():
     jobs = [
         ("Prideaux", "1SA"),
         ("web", "1SA"),
+        ("webbe", "1SA"),
         ("Prideaux", "2SA"),
         ("web", "2SA"),
+        ("webbe", "2SA"),
         ("Prideaux", "1KI"),
         ("web", "1KI"),
+        ("webbe", "1KI"),
     ]
 
     folders = [p for p in USFM_ROOT.iterdir() if p.is_dir()]

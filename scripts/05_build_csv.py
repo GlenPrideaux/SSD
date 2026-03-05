@@ -1,21 +1,12 @@
-import csv, json, re, argparse
+import csv, json, re
 from pathlib import Path
-
-parser = argparse.ArgumentParser()
-parser.add_argument("-b", action="store_true", help="Use the British English version of WEB")
-
-args = parser.parse_args()
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def map(job: str):
-    return ROOT / "data" / f"mapping_{job}.csv"
 def lxx(job :str):
     return ROOT / "build" / "json" / f"prideaux_{job}.json"
-def mt(job: str):
-    return ROOT / "build" / "json" / (f"webbe_{job}.json" if args.b else f"web_{job}.json")
 def out(name: str):
-    return ROOT / "build" / (f"{name}_parallel_be.csv" if args.b else f"{name}_parallel.csv")
+    return ROOT / "build" / f"{name}.csv" 
 
 RANGE_RE = re.compile(r"^(\d+:\d+)\s*-\s*(\d+:\d+)$")
 
@@ -76,6 +67,9 @@ def get_mt_text(mt_dict, mt_ref: str) -> str:
 def sort_key(ref: str):
     return ref_to_tuple(ref)
 
+STRUCT_DELIM = "\u241E"
+STYLE_PARA = f"{STRUCT_DELIM}STYLE:PARA{STRUCT_DELIM}"
+
 jobs = [
     ("1_samuel", "1SA"),
     ("2_samuel", "2SA"),
@@ -85,34 +79,30 @@ jobs = [
 def main():
     for name, job in jobs:
         lxx_dict = json.loads(lxx(job).read_text(encoding="utf-8"))
-        mt_dict  = json.loads(mt(job).read_text(encoding="utf-8"))
 
         rows = []
-        with map(job).open(newline="", encoding="utf-8") as f:
-            for r in csv.DictReader(f):
-                lxx_ref = r["lxx_ref"].strip()
-                mt_ref  = (r.get("mt_ref") or "").strip()
+        for lxx_ref, lxx_txt in lxx_dict.items():
+            lxx_ref = lxx_ref.strip()
+            ch, v, _ = parse_ref(lxx_ref)
+            par = 1 if STYLE_PARA in lxx_txt else 0
+            rows.append({
+                "ref": lxx_ref,
+                "ch": ch,
+                "v": v,
+                "par": par,
+                "text": lxx_txt,
+                })
 
-                lxx_txt = lxx_dict.get(lxx_ref, "")
-                mt_txt  = get_mt_text(mt_dict, mt_ref)
+            # Ensure LXX order
+            rows.sort(key=lambda x: ref_sort_key(x["ref"]))
 
-                rows.append({
-                    "lxx_ref": lxx_ref,
-                    "lxx_text": lxx_txt,
-                    "mt_ref": mt_ref if mt_ref else "—",
-                    "mt_text": mt_txt
-                    })
+            out(name).parent.mkdir(parents=True, exist_ok=True)
+            with out(name).open("w", newline="", encoding="utf-8") as f:
+                w = csv.DictWriter(f, fieldnames=["ref","ch","v","par","text"])
+                w.writeheader()
+                w.writerows(rows)
 
-                # Ensure LXX order
-                rows.sort(key=lambda x: ref_sort_key(x["lxx_ref"]))
-
-                out(name).parent.mkdir(parents=True, exist_ok=True)
-                with out(name).open("w", newline="", encoding="utf-8") as f:
-                    w = csv.DictWriter(f, fieldnames=["lxx_ref","lxx_text","mt_ref","mt_text"])
-                    w.writeheader()
-                    w.writerows(rows)
-
-            print(f"Wrote {out(name)} ({len(rows)} rows)")
+        print(f"Wrote {out(name)} ({len(rows)} rows)")
 
 if __name__ == "__main__":
     main()

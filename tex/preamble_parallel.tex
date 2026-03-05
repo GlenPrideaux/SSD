@@ -1,7 +1,7 @@
-\documentclass[10pt]{extbook}
+\documentclass[9pt]{extbook}
 
 \usepackage[margin=18mm]{geometry}
-\usepackage{multicol}
+\usepackage{paracol}
 \usepackage{microtype}
 \usepackage{hyperref}
 \usepackage{needspace}
@@ -11,8 +11,9 @@
 \renewcommand{\headrulewidth}{0.4pt}   % line under header (optional)
 
 \setlength{\columnsep}{10mm}
-\setlength{\parindent}{12pt}
+\setlength{\parindent}{0pt}
 \setlength{\parskip}{1pt}
+\setlength{\belowfootnoteskip}{14pt}
 % Width reserved for verse numbers (tune)
 
 \newlength{\verselabelwidth}
@@ -35,6 +36,7 @@
 
 % Half-hanging label: half in margin, half in text
 \newcommand{\verselabel}[1]{%
+    \hspace*{-0.5\verselabelwidth}%
     {\textsuperscript{\scriptsize #1}}%
 }
 \newcommand{\emptyverselabel}[1]{%
@@ -51,12 +53,13 @@
 \,#2\par
 }
 
-\newcommand{\Verse}[4]{% fullRef, verse, par?, text
-  \ifnum#3=1
-    \par\verselabel{#1}{#4}%
-  \else
-    \verselabel{#2}{#4}%
-  \fi
+\newcommand{\VersePair}[4]{%
+  % \noindent\verselabel{#1}\,#2\par
+  \smartverse{#1}{#2}
+  \switchcolumn[1]
+  % \noindent\verselabel{#3}\,#4\par
+  \smartverse{#3}{#4}
+  \switchcolumn[0]*
 }
 
 \newcommand{\poemindent}[1]{\hspace*{#1em}}
@@ -114,19 +117,19 @@
 \counterwithin{footnote}{section}
 \renewcommand{\thefootnote}{\alph{footnote}}
 
-% --- SSDPart environment (format defined in preamble) ---
-\newenvironment{SSDPart}[1]{%
-  % BEGIN code
-  \cleardoublepage            % start on a fresh page (book-like)
-  \thispagestyle{plain}       % or empty
-  \setcounter{footnote}{0}    % reset footnotes (optional)
-  \vspace{10pt}\Needspace{10\baselineskip}\begin{center}\small The word concerning\vspace{-10pt}
-    \section*{#1}
-  \end{center}
-  \nobreak\nointerlineskip\penalty10000
-  \begin{multicols}{2}
-}{%
-  % END code
-  \par\medskip
-  \end{multicols}
+\usepackage{tikz}
+
+\newcommand{\circled}[1]{%
+  \tikz[baseline=(char.base)]{
+    \node[shape=circle, draw, inner sep=1pt] (char) {#1};
+  }%
+}
+
+\newcommand{\columnAHead}{%
+    \hspace*{-0.5\verselabelwidth}%
+    \circled{\small P}\par
+}
+\newcommand{\columnBHead}{%
+    \hspace*{-0.5\verselabelwidth}%
+    \small (WEB)\par
 }

@@ -1,11 +1,16 @@
-import csv
+import csv, argparse
 from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-b", action="store_true", help="Use the British English version of WEB")
+
+args = parser.parse_args()
 
 ROOT = Path(__file__).resolve().parents[1]
 def inp(job: str):
-    return ROOT / "build" / f"{job}.csv"
+    return ROOT / "build" / (f"{job}_parallel_be.csv" if args.b else f"{job}_parallel.csv")
 def outfile(job: str):
-    return ROOT / "tex" / f"{job}.tex"
+    return ROOT / "tex" / (f"{job}_parallel_be.tex" if args.b else f"{job}_parallel.tex")
 
 FOOTNOTE_DELIM = "\u241EFOOTNOTE\u241E"
 
@@ -121,9 +126,11 @@ def render_structured_to_latex(escaped_text: str) -> str:
 
         elif token == "P":
             if i+2 < len(parts) and parts[i+2] == "STYLE:PARA":
-                if i>1:
-                    out.append(r"\par{}")
                 i += 2
+                if len(out):
+                    out.append(r"\par" + PILCROW)
+                else:
+                    out.append(PILCROW)
                 
             if i + 1 < len(parts):
                 seg = parts[i + 1].strip()
@@ -179,26 +186,34 @@ def main():
 
         outfile(job).parent.mkdir(parents=True, exist_ok=True)
         with outfile(job).open("w", encoding="utf-8") as out:
-            out.write(fr"\begin{{SSDPart}}{{{name}}}")
+            out.write(fr"""
+\vspace{{10pt}}\Needspace{{10\baselineskip}}\begin{{center}}\small The word concerning\vspace{{-10pt}}
+\section*{{{name}}}
+\end{{center}}
+\nobreak\nointerlineskip\penalty10000
+""")
 
             current_ch = None
             for r in rows:
-                ch = r["ch"]
-                v = r["v"]
-                ref = esc(r["ref"])
-                par = r["par"]
-                txt=r["text"]
+                ch, _ = parse_ref(r["lxx_ref"])
                 if ch != current_ch:
                     if current_ch is not None:
-                        out.write("\\par\n")
+                        out.write("\\end{paracol}\par\n")
                     out.write(f"\\ChapterHeading{{{ch}}}\n")
+                    out.write("\\begin{paracol}{2}\n")
+                    out.write(r"\columnAHead\switchcolumn[1]\columnBHead\switchcolumn[0]*")
                     current_ch = ch
 
-                if txt.count('"') % 2 == 1:
-                    print(f"WARNING: Check for unbalanced quotes in {ref}")
-                txt = render_structured_to_latex(inject_latex_footnotes(render_markers(wrap_hebrew(texify_double_quotes(esc(txt))))))
-                out.write(f"\\Verse{{{ref}}}{{{v}}}{{{par}}}{{{txt}}}\n")
-            out.write("\\end{SSDPart}\n");
+                lxx_ref = esc(r["lxx_ref"])
+                mt_ref  = esc(r["mt_ref"])
+                lxx_txt=r["lxx_text"]
+                if lxx_txt.count('"') % 2 == 1:
+                    print(f"WARNING: Check for unbalanced quotes in {lxx_ref}")
+                lxx_txt = render_structured_to_latex(inject_latex_footnotes(render_markers(wrap_hebrew(texify_double_quotes(esc(lxx_txt))))))
+                mt_txt  = render_structured_to_latex(inject_latex_footnotes(render_markers(wrap_hebrew(esc(r["mt_text"])))))
+                out.write(f"\\VersePair{{{lxx_ref}}}{{{lxx_txt}}}{{{mt_ref}}}{{{mt_txt}}}\n")
+
+            out.write(r"""\end{paracol}""")
         print(f"Wrote {outfile(job)}")
 
 if __name__ == "__main__":
