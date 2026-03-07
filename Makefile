@@ -126,8 +126,11 @@ TEX_TARGETS:= tex/1_samuel.tex tex/2_samuel.tex tex/1_kings.tex
 $(TEX_TARGETS) : $(CSV_TARGETS) scripts/06_csv_to_tex.py
 	python3 scripts/06_csv_to_tex.py
 
+tex/concordance.tex : scripts/07_make_concordance.py $(CSV_TARGETS) data/stoplist.csv data/force_lower.csv
+	python3 scripts/07_make_concordance.py
+
 .PHONY: tex
-tex: $(TEX_PAR_TARGETS) $(TEX_PAR_BE_TARGETS)
+tex: $(TEX_PAR_TARGETS) $(TEX_PAR_BE_TARGETS) $(TEX_TARGETS)
 
 TEX_PAR_SOURCES:= \
 	tex/intro_parallel.tex \
@@ -148,6 +151,7 @@ TEX_SOURCES:= \
 	tex/preamble.tex \
 	tex/title.tex \
 	tex/copyright.tex \
+	tex/concordance.tex \
 	tex/SSD_book.tex
 
 tex/SSD_parallel_book.pdf: $(TEX_PAR_TARGETS) $(TEX_PAR_SOURCES) 
@@ -175,5 +179,5 @@ pdf: SSD_parallel_book.pdf SSD_parallel_be_book.pdf SSD_book.pdf
 clean:
 	rm -rf build/*
 	rm -f tex/*.aux tex/*.log tex/*.out tex/*.pdf
-	rm -f tex/1_samuel*.tex tex/2_samuel*.tex tex/1_kings*.tex
+	rm -f tex/1_samuel*.tex tex/2_samuel*.tex tex/1_kings*.tex tex/concordance.tex
 	rm -f tex/SSD*_book.fls tex/SSD*_book.xdv tex/SSD*_book.fdb_latexmk
