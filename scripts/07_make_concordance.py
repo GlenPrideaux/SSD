@@ -324,10 +324,12 @@ def write_latex(
 ) -> None:
     items: List[Tuple[str, List[str], str]] = []
 
-    DICT = set()
-    with open("/usr/share/dict/words") as f:
-        for line in f:
-            DICT.add(line.strip())
+    # The dictionary check has served its purpose (making a force_lower
+    # list) and can be removed so as to remove dependency on /usr/share/dict
+#    DICT = set()
+#    with open("/usr/share/dict/words") as f:
+#        for line in f:
+#            DICT.add(line.strip())
     force_lower = set()
     with open("data/force_lower.csv") as f:
         for line in f:
@@ -350,9 +352,9 @@ def write_latex(
         spans = group_consecutive_refs(refs)
         grouped_refs = format_spans_contextually(spans)
 
-        if shown != lemma:
-            if lemma in DICT:
-                print(f"Warning: {lemma} appears only capitalised but may be a normal English word")
+#        if shown != lemma:
+#            if lemma in DICT:
+#                print(f"Warning: {lemma} appears only capitalised but may be a normal English word")
         items.append((shown, grouped_refs, lemma))
 
     with output_path.open("w", encoding="utf-8") as f:
