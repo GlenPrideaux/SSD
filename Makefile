@@ -152,7 +152,6 @@ TEX_SOURCES:= \
 	tex/preamble.tex \
 	tex/title.tex \
 	tex/copyright.tex \
-	tex/concordance.tex \
 	tex/SSD_book.tex
 
 tex/SSD_parallel_book.pdf: $(TEX_PAR_TARGETS) $(TEX_PAR_SOURCES) 
@@ -161,7 +160,7 @@ tex/SSD_parallel_book.pdf: $(TEX_PAR_TARGETS) $(TEX_PAR_SOURCES)
 tex/SSD_parallel_be_book.pdf: $(TEX_PAR_BE_TARGETS) $(TEX_PAR_BE_SOURCES) 
 	cd tex && latexmk -xelatex -interaction=nonstopmode -halt-on-error SSD_parallel_be_book.tex
 
-tex/SSD_book.pdf: $(TEX_TARGETS) $(TEX_SOURCES) 
+tex/SSD_book.pdf: $(TEX_TARGETS) $(TEX_SOURCES) tex/concordance.tex 
 	cd tex && latexmk -xelatex -interaction=nonstopmode -halt-on-error SSD_book.tex
 
 SSD_parallel_book.pdf: tex/SSD_parallel_book.pdf
