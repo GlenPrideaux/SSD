@@ -84,12 +84,13 @@ $(JSON_FILES) : $(WEB_USFM_TARGETS) $(WEBBE_USFM_TARGETS) $(PRIDEAUX_USFM_TARGET
 .PHONY: json
 json: $(JSON_FILES)
 
+MAPPING := data/mapping_1KI.csv data/mapping_1SA.csv data/mapping_2SA.csv
 CSV_PAR_TARGETS := \
 	build/1_samuel_parallel.csv \
 	build/2_samuel_parallel.csv \
 	build/1_kings_parallel.csv
 
-$(CSV_PAR_TARGETS) : $(JSON_FILES) scripts/05_build_parallel_csv.py
+$(CSV_PAR_TARGETS) : $(JSON_FILES) $(MAPPING) scripts/05_build_parallel_csv.py
 	python3 scripts/05_build_parallel_csv.py
 
 CSV_PAR_BE_TARGETS := \
@@ -181,3 +182,73 @@ clean:
 	rm -f tex/*.aux tex/*.log tex/*.out tex/*.pdf
 	rm -f tex/1_samuel*.tex tex/2_samuel*.tex tex/1_kings*.tex tex/concordance.tex
 	rm -f tex/SSD*_book.fls tex/SSD*_book.xdv tex/SSD*_book.fdb_latexmk
+
+
+PDFDIFF = tmp=$$(mktemp); \
+	trap 'rm -f "$$tmp"' EXIT; \
+	git show HEAD:$1 > "$$tmp"; \
+	diff-pdf --view "$$tmp" $1
+
+compare:
+	@$(call PDFDIFF,SSD_book.pdf)
+
+compare-parallel:
+	@$(call PDFDIFF,SSD_parallel_book.pdf)
+
+compare-parallel-be:
+	@$(call PDFDIFF,SSD_parallel_be_book.pdf)
+
+
+GITFILES := sources/odt/sk_all_2ed.odt \
+	$(TEX_SOURCES) $(TEX_PAR_SOURCES)  $(TEX_PAR_BE_SOURCES) \
+	$(WEB_USFM_ZIP) $(WEBBE_USFM_ZIP) \
+	data/stoplist.csv data/force_lower.csv \
+	$(MAPPING) \
+	SSD_parallel_book.pdf SSD_parallel_be_book.pdf SSD_book.pdf \
+	Makefile
+
+commit: $(GITFILES)
+	$(eval MSG := $(filter-out $@,$(MAKECMDGOALS)))
+	@if [ -z "$(MSG)" ]; then \
+		echo "Usage: make commit \"message\""; \
+		exit 1; \
+	fi
+	git add $(GITFILES)
+	if ! git diff-index --quiet HEAD --; then \
+	    git commit -m "$(MSG)"; \
+	fi
+
+tag:
+	@if [ -z "$(TAG)" ]; then \
+		echo "Usage: make tag TAG=v1.2 MSG=\"Release message\""; \
+		exit 1; \
+	fi
+	@if [ -z "$(MSG)" ]; then \
+		echo "Usage: make tag TAG=v1.2 MSG=\"Release message\""; \
+		exit 1; \
+	fi
+	git tag -a "$(TAG)" -m "$(MSG)"
+
+push:
+	git push
+	git push --tags
+
+publish: all
+	@if [ -z "$(TAG)" ]; then \
+		echo "Usage: make publish TAG=v1.2 MSG=\"Release message\""; \
+		exit 1; \
+	fi
+	@if [ -z "$(MSG)" ]; then \
+		echo "Usage: make publish TAG=v1.2 MSG=\"Release message\""; \
+		exit 1; \
+	fi
+	git add $(GITFILES)
+	git diff --cached --quiet || git commit -m "$(MSG)"
+	git tag "$(TAG)"
+	git push
+	git push --tags
+
+
+
+%:
+	@:
