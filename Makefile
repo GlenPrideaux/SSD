@@ -207,9 +207,8 @@ GITFILES := sources/odt/sk_all_2ed.odt \
 	Makefile
 
 commit: $(GITFILES)
-	$(eval MSG := $(filter-out $@,$(MAKECMDGOALS)))
 	@if [ -z "$(MSG)" ]; then \
-		echo "Usage: make commit \"message\""; \
+		echo "Usage: make commit MSG=\"Commit message\""; \
 		exit 1; \
 	fi
 	git add $(GITFILES)
@@ -249,5 +248,3 @@ publish: all
 
 
 
-%:
-	@:
