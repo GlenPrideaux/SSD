@@ -228,8 +228,8 @@ tag:
 	git tag -a "$(TAG)" -m "$(MSG)"
 
 push:
-	git push
-	git push --tags
+	git push origin main
+	git push --tags origin main
 
 publish: all
 	@if [ -z "$(TAG)" ]; then \
@@ -243,8 +243,8 @@ publish: all
 	git add $(GITFILES)
 	git diff --cached --quiet || git commit -m "$(MSG)"
 	git tag "$(TAG)"
-	git push
-	git push --tags
+	git push origin main
+	git push --tags origin main
 
 
 
