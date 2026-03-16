@@ -123,12 +123,17 @@ $(TEX_PAR_BE_TARGETS) : $(CSV_PAR_BE_TARGETS) scripts/06_csv_to_parallel_tex.py
 	python3 scripts/06_csv_to_parallel_tex.py -b
 
 TEX_TARGETS:= tex/1_samuel.tex tex/2_samuel.tex tex/1_kings.tex
+TEX_BE_TARGETS:= tex/1_samuel_be.tex tex/2_samuel_be.tex tex/1_kings_be.tex
 
 $(TEX_TARGETS) : $(CSV_TARGETS) scripts/06_csv_to_tex.py
 	python3 scripts/06_csv_to_tex.py
+$(TEX_BE_TARGETS) : $(CSV_TARGETS) scripts/06_csv_to_tex.py
+	python3 scripts/06_csv_to_tex.py -b
 
 tex/concordance.tex : scripts/07_make_concordance.py $(CSV_TARGETS) data/stoplist.csv data/force_lower.csv
 	python3 scripts/07_make_concordance.py
+tex/concordance_be.tex : scripts/07_make_concordance.py $(CSV_TARGETS) data/stoplist.csv data/force_lower.csv
+	python3 scripts/07_make_concordance.py -b
 
 .PHONY: tex
 tex: $(TEX_PAR_TARGETS) $(TEX_PAR_BE_TARGETS) $(TEX_TARGETS)
@@ -152,7 +157,15 @@ TEX_SOURCES:= \
 	tex/preamble.tex \
 	tex/title.tex \
 	tex/copyright.tex \
-	tex/SSD_book.tex
+	tex/SSD_book.tex \
+	tex/concordance.tex
+TEX_BE_SOURCES:= \
+	tex/intro.tex \
+	tex/preamble.tex \
+	tex/title.tex \
+	tex/copyright.tex \
+	tex/SSD_book_be.tex \
+	tex/concordance_be.tex
 
 tex/SSD_parallel_book.pdf: $(TEX_PAR_TARGETS) $(TEX_PAR_SOURCES) 
 	cd tex && latexmk -xelatex -interaction=nonstopmode -halt-on-error SSD_parallel_book.tex
@@ -162,6 +175,8 @@ tex/SSD_parallel_be_book.pdf: $(TEX_PAR_BE_TARGETS) $(TEX_PAR_BE_SOURCES)
 
 tex/SSD_book.pdf: $(TEX_TARGETS) $(TEX_SOURCES) tex/concordance.tex 
 	cd tex && latexmk -xelatex -interaction=nonstopmode -halt-on-error SSD_book.tex
+tex/SSD_book_be.pdf: $(TEX_BE_TARGETS) $(TEX_BE_SOURCES) tex/concordance.tex 
+	cd tex && latexmk -xelatex -interaction=nonstopmode -halt-on-error SSD_book_be.tex
 
 SSD_parallel_book.pdf: tex/SSD_parallel_book.pdf
 	cp tex/SSD_parallel_book.pdf .
@@ -171,16 +186,19 @@ SSD_parallel_be_book.pdf: tex/SSD_parallel_be_book.pdf
 
 SSD_book.pdf: tex/SSD_book.pdf
 	cp tex/SSD_book.pdf .
+SSD_book_be.pdf: tex/SSD_book_be.pdf
+	cp tex/SSD_book_be.pdf .
 
 .PHONY: pdf
-pdf: SSD_parallel_book.pdf SSD_parallel_be_book.pdf SSD_book.pdf
+pdf: SSD_parallel_book.pdf SSD_parallel_be_book.pdf SSD_book.pdf SSD_book_be.pdf
 
 .PHONY: clean
 clean:
 	rm -rf build/*
 	rm -f tex/*.aux tex/*.log tex/*.out tex/*.pdf
-	rm -f tex/1_samuel*.tex tex/2_samuel*.tex tex/1_kings*.tex tex/concordance.tex
+	rm -f tex/1_samuel*.tex tex/2_samuel*.tex tex/1_kings*.tex tex/concordance.tex tex/concordance_be.tex
 	rm -f tex/SSD*_book.fls tex/SSD*_book.xdv tex/SSD*_book.fdb_latexmk
+	rm -f tex/SSD*_book_be.fls tex/SSD*_book_be.xdv tex/SSD*_book_be.fdb_latexmk
 
 
 PDFDIFF = tmp=$$(mktemp); \

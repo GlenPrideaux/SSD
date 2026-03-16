@@ -38,7 +38,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import DefaultDict, Dict, Iterable, List, Optional, Set, Tuple
 
-
 DEFAULT_INPUTS = [
     Path("build/1_samuel.csv"),
     Path("build/2_samuel.csv"),
@@ -112,6 +111,47 @@ def latex_escape(text: str) -> str:
         "^": r"\textasciicircum{}",
     }
     return "".join(replacements.get(ch, ch) for ch in text)
+
+def load_spelling_map(path) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    path = Path(path)
+
+    with path.open(encoding="utf-8") as f:
+        for lineno, raw_line in enumerate(f, start=1):
+            line = raw_line.strip()
+
+            if not line or line.startswith("#"):
+                continue
+
+            try:
+                src, dst = line.split("\t", 1)
+            except ValueError as e:
+                raise ValueError(
+                    f"{path}:{lineno}: expected TAB-separated 'source<TAB>target'"
+                ) from e
+
+            if not src:
+                raise ValueError(f"{path}:{lineno}: empty source spelling")
+
+            # lowercase
+            mapping[src] = dst
+            # Capitalised
+            mapping[src.capitalize()] = dst.capitalize()
+            # Optional: ALL CAPS
+            mapping[src.upper()] = dst.upper()
+            
+    return mapping
+
+def apply_spelling_map(text: str, mapping: dict[str, str]) -> str:
+    if not mapping:
+        return text
+
+    # Longest first avoids partial matches where one key contains another.
+    pattern = re.compile(
+        r"\b(" + "|".join(re.escape(k) for k in sorted(mapping, key=len, reverse=True)) + r")\b"
+    )
+
+    return pattern.sub(lambda m: mapping[m.group(0)], text)
 
 
 def load_stopwords(path: Optional[Path]) -> Set[str]:
@@ -265,6 +305,7 @@ def format_spans_contextually(spans: List[RefSpan]) -> List[str]:
 def build_concordance(
     paths: List[Path],
     stopwords: Set[str],
+    spelling_map: dict[str, str],
 ) -> Tuple[Dict[str, List[VerseRef]], Set[str], Set[str]]:
     concordance: DefaultDict[str, List[VerseRef]] = defaultdict(list)
     seen_capital: Set[str] = set()
@@ -279,6 +320,8 @@ def build_concordance(
         if not ref or not text or not ch or not v:
             continue
 
+        text = apply_spelling_map(text, spelling_map)
+        
         verse_num, verse_suffix = parse_verse_num(v)
 
         verse_ref = VerseRef(
@@ -409,8 +452,8 @@ def main() -> None:
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("tex/concordance.tex"),
-        help="Output LaTeX file. Default: tex/concordance.tex",
+        default=None,
+        help="Output LaTeX file. Default: tex/concordance.tex or tex/concordance_be.tex for British version",
     )
     parser.add_argument(
         "--stopwords",
@@ -418,11 +461,21 @@ def main() -> None:
         default="data/stoplist.csv",
         help="Optional file containing stopwords, one per line. Default: data/stoplist.csv",
     )
+    parser.add_argument("-b", "--british", action="store_true", help="Use the British English version of WEB")
 
     args = parser.parse_args()
 
+    if args.british:
+        spelling_map = load_spelling_map(Path("data/us_to_uk.tsv"))
+        if args.output is None:
+            args.output = Path("tex/concordance_be.tex")
+    else:
+        spelling_map = load_spelling_map(Path("data/uk_to_us.tsv"))
+        if args.output is None:
+            args.output = Path("tex/concordance.tex")
+            
     stopwords = load_stopwords(args.stopwords)
-    concordance, seen_capital, seen_lower = build_concordance(list(args.inputs), stopwords)
+    concordance, seen_capital, seen_lower = build_concordance(list(args.inputs), stopwords, spelling_map)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     write_latex(

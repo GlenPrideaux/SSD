@@ -1,11 +1,22 @@
-import csv
+import csv, argparse
 from pathlib import Path
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-b", action="store_true", help="Use the British English version of WEB")
+
+args = parser.parse_args()
 
 ROOT = Path(__file__).resolve().parents[1]
 def inp(job: str):
     return ROOT / "build" / f"{job}.csv"
-def outfile(job: str):
-    return ROOT / "tex" / f"{job}.tex"
+if args.b:
+    def outfile(job: str):
+        return ROOT / "tex" / f"{job}_be.tex"
+    SPELLING = ROOT / "data" / "us_to_uk.tsv"
+else:
+    def outfile(job: str):
+        return ROOT / "tex" / f"{job}.tex"
+    SPELLING = ROOT / "data" / "uk_to_us.tsv"
 
 FOOTNOTE_DELIM = "\u241EFOOTNOTE\u241E"
 
@@ -18,6 +29,48 @@ SC_OPEN = "\u241ESCOPEN\u241E"
 SC_CLOSE = "\u241ESCCLOSE\u241E"
 SUP_OPEN = "\u241ESUPOPEN\u241E"
 SUP_CLOSE = "\u241ESUPCLOSE\u241E"
+
+def load_spelling_map(path) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    path = Path(path)
+
+    with path.open(encoding="utf-8") as f:
+        for lineno, raw_line in enumerate(f, start=1):
+            line = raw_line.strip()
+
+            if not line or line.startswith("#"):
+                continue
+
+            try:
+                src, dst = line.split("\t", 1)
+            except ValueError as e:
+                raise ValueError(
+                    f"{path}:{lineno}: expected TAB-separated 'source<TAB>target'"
+                ) from e
+
+            if not src:
+                raise ValueError(f"{path}:{lineno}: empty source spelling")
+
+            # lowercase
+            mapping[src] = dst
+            # Capitalised
+            mapping[src.capitalize()] = dst.capitalize()
+            # Optional: ALL CAPS
+            mapping[src.upper()] = dst.upper()
+            
+    return mapping
+
+def apply_spelling_map(text: str, mapping: dict[str, str]) -> str:
+    if not mapping:
+        return text
+
+    # Longest first avoids partial matches where one key contains another.
+    pattern = re.compile(
+        r"\b(" + "|".join(re.escape(k) for k in sorted(mapping, key=len, reverse=True)) + r")\b"
+    )
+
+    return pattern.sub(lambda m: mapping[m.group(0)], text)
+
 
 def wrap_hebrew(text):
     return HEBREW_RE.sub(lambda m: r'\texthebrew{' + m.group(0) + '}', text)
@@ -172,6 +225,7 @@ jobs = [
     ]
 
 def main():
+    spelling_map = load_spelling_map(SPELLING)
     for job, name in jobs:
         rows = []
         with inp(job).open(newline="", encoding="utf-8") as f:
@@ -188,14 +242,13 @@ def main():
                 ref = esc(r["ref"])
                 par = r["par"]
                 txt=r["text"]
+                txt=apply_spelling_map(txt, spelling_map)
                 if ch != current_ch:
                     if current_ch is not None:
                         out.write("\\par\n")
                     out.write(f"\\ChapterHeading{{{ch}}}\n")
                     current_ch = ch
 
-                if txt.count('"') % 2 == 1:
-                    print(f"WARNING: Check for unbalanced quotes in {ref}")
                 txt = render_structured_to_latex(inject_latex_footnotes(render_markers(wrap_hebrew(texify_double_quotes(esc(txt))))))
                 out.write(f"\\Verse{{{ref}}}{{{v}}}{{{par}}}{{{txt}}}\n")
             out.write("\\end{SSDPart}\n");

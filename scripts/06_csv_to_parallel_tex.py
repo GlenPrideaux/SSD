@@ -11,6 +11,11 @@ def inp(job: str):
     return ROOT / "build" / (f"{job}_parallel_be.csv" if args.b else f"{job}_parallel.csv")
 def outfile(job: str):
     return ROOT / "tex" / (f"{job}_parallel_be.tex" if args.b else f"{job}_parallel.tex")
+if args.b:
+    SPELLING = ROOT / "data" / "us_to_uk.tsv"
+else:
+    SPELLING = ROOT / "data" / "uk_to_us.tsv"
+
 
 FOOTNOTE_DELIM = "\u241EFOOTNOTE\u241E"
 
@@ -23,6 +28,48 @@ SC_OPEN = "\u241ESCOPEN\u241E"
 SC_CLOSE = "\u241ESCCLOSE\u241E"
 SUP_OPEN = "\u241ESUPOPEN\u241E"
 SUP_CLOSE = "\u241ESUPCLOSE\u241E"
+
+def load_spelling_map(path) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    path = Path(path)
+
+    with path.open(encoding="utf-8") as f:
+        for lineno, raw_line in enumerate(f, start=1):
+            line = raw_line.strip()
+
+            if not line or line.startswith("#"):
+                continue
+
+            try:
+                src, dst = line.split("\t", 1)
+            except ValueError as e:
+                raise ValueError(
+                    f"{path}:{lineno}: expected TAB-separated 'source<TAB>target'"
+                ) from e
+
+            if not src:
+                raise ValueError(f"{path}:{lineno}: empty source spelling")
+
+            # lowercase
+            mapping[src] = dst
+            # Capitalised
+            mapping[src.capitalize()] = dst.capitalize()
+            # Optional: ALL CAPS
+            mapping[src.upper()] = dst.upper()
+            
+    return mapping
+
+def apply_spelling_map(text: str, mapping: dict[str, str]) -> str:
+    if not mapping:
+        return text
+
+    # Longest first avoids partial matches where one key contains another.
+    pattern = re.compile(
+        r"\b(" + "|".join(re.escape(k) for k in sorted(mapping, key=len, reverse=True)) + r")\b"
+    )
+
+    return pattern.sub(lambda m: mapping[m.group(0)], text)
+
 
 def wrap_hebrew(text):
     return HEBREW_RE.sub(lambda m: r'\texthebrew{' + m.group(0) + '}', text)
@@ -179,6 +226,7 @@ jobs = [
     ]
 
 def main():
+    spelling_map = load_spelling_map(SPELLING)
     for job, name in jobs:
         rows = []
         with inp(job).open(newline="", encoding="utf-8") as f:
@@ -206,10 +254,12 @@ def main():
 
                 lxx_ref = esc(r["lxx_ref"])
                 mt_ref  = esc(r["mt_ref"])
-                lxx_txt=r["lxx_text"]
-                if lxx_txt.count('"') % 2 == 1:
-                    print(f"WARNING: Check for unbalanced quotes in {lxx_ref}")
-                lxx_txt = render_structured_to_latex(inject_latex_footnotes(render_markers(wrap_hebrew(texify_double_quotes(esc(lxx_txt))))))
+                lxx_orig_txt = esc(r["lxx_text"])
+                lxx_txt=apply_spelling_map(lxx_orig_txt, spelling_map)
+                if lxx_txt != lxx_orig_txt:
+                    print(f"Spelling adjusted in {lxx_ref}")
+
+                lxx_txt = render_structured_to_latex(inject_latex_footnotes(render_markers(wrap_hebrew(texify_double_quotes(lxx_txt)))))
                 mt_txt  = render_structured_to_latex(inject_latex_footnotes(render_markers(wrap_hebrew(esc(r["mt_text"])))))
                 out.write(f"\\VersePair{{{lxx_ref}}}{{{lxx_txt}}}{{{mt_ref}}}{{{mt_txt}}}\n")
 
